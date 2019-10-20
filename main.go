@@ -4,7 +4,6 @@ import (
 	"log"
 
 	"github.com/hajimehoshi/ebiten"
-	"github.com/hajimehoshi/ebiten/ebitenutil"
 
 	"github.com/mazei513/sugoku/game"
 	"github.com/mazei513/sugoku/stringerr"
@@ -27,8 +26,7 @@ func update(screen *ebiten.Image) error {
 		return nil
 	}
 
-	ebitenutil.DebugPrint(screen, "Hello, world!")
-	return nil
+	return gameState.Draw(screen)
 }
 
 func main() {
