@@ -103,6 +103,29 @@ func (s *Square) Update() {
 			s.isSelected = true
 		}
 	}
+	if s.isSelected {
+		if ebiten.IsKeyPressed(ebiten.Key0) || ebiten.IsKeyPressed(ebiten.KeyBackspace) {
+			s.value = 0
+		} else if ebiten.IsKeyPressed(ebiten.Key1) {
+			s.value = 1
+		} else if ebiten.IsKeyPressed(ebiten.Key2) {
+			s.value = 2
+		} else if ebiten.IsKeyPressed(ebiten.Key3) {
+			s.value = 3
+		} else if ebiten.IsKeyPressed(ebiten.Key4) {
+			s.value = 4
+		} else if ebiten.IsKeyPressed(ebiten.Key5) {
+			s.value = 5
+		} else if ebiten.IsKeyPressed(ebiten.Key6) {
+			s.value = 6
+		} else if ebiten.IsKeyPressed(ebiten.Key7) {
+			s.value = 7
+		} else if ebiten.IsKeyPressed(ebiten.Key8) {
+			s.value = 8
+		} else if ebiten.IsKeyPressed(ebiten.Key9) {
+			s.value = 9
+		}
+	}
 }
 
 func (s Square) drawSquare(screen *ebiten.Image) {
@@ -117,6 +140,9 @@ func (s Square) drawSquare(screen *ebiten.Image) {
 }
 
 func (s Square) drawValueText(screen *ebiten.Image) {
+	if s.value == 0 {
+		return
+	}
 	text.Draw(screen, strconv.Itoa(int(s.value)), squareNumberFont, s.textPosX, s.textPosY, s.textColor)
 }
 

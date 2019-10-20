@@ -1,7 +1,14 @@
 package game
 
 import (
+	"strings"
+
 	"github.com/hajimehoshi/ebiten"
+)
+
+const (
+	boardSize = 9*squareDrawSize + 2*groupPadSize
+	boardPad  = 8
 )
 
 type board struct {
@@ -12,10 +19,29 @@ type board struct {
 }
 
 func newEmptyBoard() (*board, error) {
+	return newBoardFromString(`
+	000000000
+	000000000
+	000000000
+	000000000
+	000000000
+	000000000
+	000000000
+	000000000
+	000000000
+	`)
+}
+
+func newBoardFromString(boardString string) (*board, error) {
+	boardString = strings.ReplaceAll(boardString, "\n", "")
+	boardString = strings.ReplaceAll(boardString, "\t", "")
+	boardString = strings.ReplaceAll(boardString, " ", "")
+
 	squares := make([]*Square, 0, 9*9)
-	for x := uint8(0); x < 9; x++ {
-		for y := uint8(0); y < 9; y++ {
-			square, err := NewSquare(x%2 == 0, y+1, x, y)
+	for y := uint8(0); y < 9; y++ {
+		for x := uint8(0); x < 9; x++ {
+			value := boardString[y*9+x] - '0'
+			square, err := NewSquare(value == 0, value, x, y)
 			if err != nil {
 				return nil, err
 			}
@@ -23,13 +49,12 @@ func newEmptyBoard() (*board, error) {
 		}
 	}
 
-	boardSize := 9*9*squareDrawSize + 2*groupPadSize
 	boardImage, err := ebiten.NewImage(boardSize, boardSize, ebiten.FilterNearest)
 	if err != nil {
 		return nil, err
 	}
 	opts := &ebiten.DrawImageOptions{}
-	opts.GeoM.Translate(8, 8)
+	opts.GeoM.Translate(boardPad, boardPad)
 
 	return &board{
 		squares:    squares,

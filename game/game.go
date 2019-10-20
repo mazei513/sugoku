@@ -7,6 +7,11 @@ import (
 	"github.com/hajimehoshi/ebiten/inpututil"
 )
 
+const (
+	// WindowSize is the minimum size the window must be to fit the board
+	WindowSize = boardSize + 2*boardPad
+)
+
 // Game controls the game state
 type Game struct {
 	toExit bool

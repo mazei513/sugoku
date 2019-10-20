@@ -36,7 +36,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if err := ebiten.Run(update, 640, 640, 1.0, "Sugoku"); err != nil && err != regularExit {
+	if err := ebiten.Run(update, game.WindowSize, game.WindowSize, 1.0, "Sugoku"); err != nil && err != regularExit {
 		log.Fatal(err)
 	}
 }
