@@ -1,6 +1,8 @@
 package game
 
 import (
+	"fmt"
+
 	"github.com/hajimehoshi/ebiten"
 	"github.com/hajimehoshi/ebiten/inpututil"
 )
@@ -21,8 +23,9 @@ func (g Game) ToExit() bool {
 }
 
 // HandleInput updates the game state based on the current input
-func (g Game) HandleInput() error {
+func (g *Game) HandleInput() error {
 	if inpututil.IsKeyJustPressed(ebiten.KeyQ) {
+		fmt.Println("here")
 		g.toExit = true
 	}
 

@@ -15,6 +15,10 @@ const regularExit stringerr.StringErr = "expected exit"
 var gameState *game.Game
 
 func update(screen *ebiten.Image) error {
+	if err := gameState.HandleInput(); err != nil {
+		return err
+	}
+
 	if gameState.ToExit() {
 		return regularExit
 	}
