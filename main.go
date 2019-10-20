@@ -14,7 +14,7 @@ const regularExit stringerr.StringErr = "expected exit"
 var gameState *game.Game
 
 func update(screen *ebiten.Image) error {
-	if err := gameState.HandleInput(); err != nil {
+	if err := gameState.Update(); err != nil {
 		return err
 	}
 
@@ -30,7 +30,11 @@ func update(screen *ebiten.Image) error {
 }
 
 func main() {
-	gameState = game.NewGame()
+	var err error
+	gameState, err = game.NewGame()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	if err := ebiten.Run(update, 640, 640, 1.0, "Sugoku"); err != nil && err != regularExit {
 		log.Fatal(err)

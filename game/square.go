@@ -2,7 +2,9 @@ package game
 
 import (
 	"fmt"
+	"image"
 	"image/color"
+	"log"
 	"strconv"
 
 	"github.com/hajimehoshi/ebiten"
@@ -16,79 +18,111 @@ func (i InvalidValueErr) Error() string {
 	return fmt.Sprintf("invalid value given: %d", i)
 }
 
-const squareDrawSize = 64
+const (
+	squareDrawSize = 64
+	groupPadSize   = 12
+)
 
-type square struct {
-	isSelected bool
-	isEditable bool
-	value      uint8
-	x, y       uint8
+var (
+	innerSquareImage       *ebiten.Image
+	innerSquareDrawOptions = &ebiten.DrawImageOptions{}
+	outerColorUnselected   = color.NRGBA{0, 0, 0, 0xFF}
+	outerColorSelected     = color.NRGBA{0xCC, 0x22, 0x22, 0xFF}
+	textColorUneditable    = color.NRGBA{0, 0, 0, 0xFF}
+	textColorEditable      = color.NRGBA{0x33, 0x33, 0xBB, 0xFF}
+)
+
+func init() {
+	var err error
+	innerSquareImage, err = ebiten.NewImage(squareDrawSize-8, squareDrawSize-8, ebiten.FilterNearest)
+	if err != nil {
+		log.Fatal(err)
+	}
+	innerSquareImage.Fill(color.White)
+	innerSquareDrawOptions.GeoM.Translate(4, 4)
 }
 
-func (s square) getImage() (*ebiten.Image, error) {
+// Square handles a single value of a sudoku square
+type Square struct {
+	// mutable state
+	isSelected bool
+	value      uint8
+
+	// constant values
+	isEditable         bool
+	x, y               uint8
+	rect               image.Rectangle
+	textPosX, textPosY int
+	outerImage         *ebiten.Image
+	drawOpts           *ebiten.DrawImageOptions
+	textColor          color.Color
+}
+
+func minPos(v int) int {
+	return v*squareDrawSize + v/3*groupPadSize
+}
+
+// NewSquare creates a new square with the given params
+func NewSquare(isEditable bool, value, x, y uint8) (*Square, error) {
+	minX := minPos(int(x))
+	minY := minPos(int(y))
+
 	outer, err := ebiten.NewImage(squareDrawSize, squareDrawSize, ebiten.FilterNearest)
 	if err != nil {
 		return nil, err
 	}
+	drawOpts := &ebiten.DrawImageOptions{}
+	drawOpts.GeoM.Translate(float64(minX), float64(minY))
 
-	outerColor := color.NRGBA{0, 0, 0, 0xFF}
+	textColor := textColorUneditable
+	if isEditable {
+		textColor = textColorEditable
+	}
+
+	return &Square{
+		isSelected: false,
+		isEditable: isEditable,
+		value:      value,
+		x:          x,
+		y:          y,
+		rect:       image.Rect(minX, minY, minX+squareDrawSize, minY+squareDrawSize),
+		textPosX:   minX + 14,
+		textPosY:   minY + squareDrawSize - 12,
+		outerImage: outer,
+		drawOpts:   drawOpts,
+		textColor:  textColor,
+	}, nil
+}
+
+// Update handles the square's state
+func (s *Square) Update() {
+	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+		s.isSelected = false
+		x, y := ebiten.CursorPosition()
+		if s.rect.Min.X <= x && x < s.rect.Max.X && s.rect.Min.Y <= y && y < s.rect.Max.Y {
+			s.isSelected = true
+		}
+	}
+}
+
+func (s Square) drawSquare(screen *ebiten.Image) {
+	outerColor := outerColorUnselected
 	if s.isSelected {
-		outerColor = color.NRGBA{0xCC, 0x22, 0x22, 0xFF}
+		outerColor = outerColorSelected
 	}
-	outer.Fill(outerColor)
+	s.outerImage.Fill(outerColor)
+	s.outerImage.DrawImage(innerSquareImage, innerSquareDrawOptions)
 
-	inner, err := ebiten.NewImage(squareDrawSize-4, squareDrawSize-4, ebiten.FilterNearest)
-	inner.Fill(color.White)
-	opts := &ebiten.DrawImageOptions{}
-	opts.GeoM.Translate(2, 2)
-
-	outer.DrawImage(inner, opts)
-
-	return outer, nil
+	screen.DrawImage(s.outerImage, s.drawOpts)
 }
 
-func (s square) xDrawPos(boardOffsetX float64) float64 {
-	xOffset := float64(s.x/3)*4 + boardOffsetX
-	return float64(s.x)*squareDrawSize + xOffset
+func (s Square) drawValueText(screen *ebiten.Image) {
+	text.Draw(screen, strconv.Itoa(int(s.value)), squareNumberFont, s.textPosX, s.textPosY, s.textColor)
 }
 
-func (s square) yDrawPos(boardOffsetY float64) float64 {
-	yOffset := float64(s.y/3)*4 + boardOffsetY
-	return float64(s.y)*squareDrawSize + yOffset
-}
-
-func (s square) drawSquare(screen *ebiten.Image, boardOffsetX, boardOffsetY float64) error {
-	img, err := s.getImage()
-	if err != nil {
-		return err
-	}
-	opts := &ebiten.DrawImageOptions{}
-	opts.GeoM.Translate(s.xDrawPos(boardOffsetX), s.yDrawPos(boardOffsetY))
-
-	screen.DrawImage(img, opts)
-	return nil
-}
-
-func (s square) xTextPos(boardOffsetX float64) int {
-	return int(s.xDrawPos(boardOffsetX)) + 14
-}
-
-func (s square) yTextPos(boardOffsetY float64) int {
-	return int(s.yDrawPos(boardOffsetY)) + squareDrawSize - 12
-}
-
-func (s square) drawValueText(screen *ebiten.Image, boardOffsetX, boardOffsetY float64) {
-	textColor := color.NRGBA{0, 0, 0, 0xFF}
-	if s.isEditable {
-		textColor = color.NRGBA{0x33, 0x33, 0xBB, 0xFF}
-	}
-	text.Draw(screen, strconv.Itoa(int(s.value)), mplusNormalFont, s.xTextPos(boardOffsetX), s.yTextPos(boardOffsetY), textColor)
-}
-
-func (s square) Draw(screen *ebiten.Image, boardOffsetX, boardOffsetY float64) error {
-	if err := s.drawSquare(screen, boardOffsetX, boardOffsetY); err != nil {
-		return err
-	}
-	s.drawValueText(screen, boardOffsetX, boardOffsetY)
+// Draw draws the square
+func (s Square) Draw(screen *ebiten.Image) error {
+	s.drawSquare(screen)
+	s.drawValueText(screen)
 	return nil
 }

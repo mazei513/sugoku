@@ -14,8 +14,12 @@ type Game struct {
 }
 
 // NewGame creates a new instance of Game
-func NewGame() *Game {
-	return &Game{board: newEmptyBoard()}
+func NewGame() (*Game, error) {
+	board, err := newEmptyBoard()
+	if err != nil {
+		return nil, err
+	}
+	return &Game{board: board}, nil
 }
 
 // ToExit signals the program to exit
@@ -23,11 +27,13 @@ func (g Game) ToExit() bool {
 	return g.toExit
 }
 
-// HandleInput updates the game state based on the current input
-func (g *Game) HandleInput() error {
+// Update updates the game state based on the current input
+func (g *Game) Update() error {
 	if inpututil.IsKeyJustPressed(ebiten.KeyQ) {
 		g.toExit = true
 	}
+
+	g.board.Update()
 
 	return nil
 }

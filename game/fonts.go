@@ -8,7 +8,7 @@ import (
 	"golang.org/x/image/font"
 )
 
-var mplusNormalFont font.Face
+var squareNumberFont font.Face
 
 func init() {
 	tt, err := truetype.Parse(fonts.MPlus1pRegular_ttf)
@@ -16,7 +16,7 @@ func init() {
 		log.Fatal(err)
 	}
 	const dpi = 72
-	mplusNormalFont = truetype.NewFace(tt, &truetype.Options{
+	squareNumberFont = truetype.NewFace(tt, &truetype.Options{
 		Size:    56,
 		DPI:     dpi,
 		Hinting: font.HintingFull,
