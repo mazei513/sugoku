@@ -45,8 +45,9 @@ func init() {
 // Square handles a single value of a sudoku square
 type Square struct {
 	// mutable state
-	isSelected bool
-	value      uint8
+	isSelected  bool
+	value       uint8
+	isDuplicate bool
 
 	// constant values
 	isEditable         bool
@@ -80,50 +81,42 @@ func NewSquare(isEditable bool, value, x, y uint8) (*Square, error) {
 	}
 
 	return &Square{
-		isSelected: false,
-		isEditable: isEditable,
-		value:      value,
-		x:          x,
-		y:          y,
-		rect:       image.Rect(minX, minY, minX+squareDrawSize, minY+squareDrawSize),
-		textPosX:   minX + 14,
-		textPosY:   minY + squareDrawSize - 12,
-		outerImage: outer,
-		drawOpts:   drawOpts,
-		textColor:  textColor,
+		isSelected:  false,
+		isDuplicate: false,
+		isEditable:  isEditable,
+		value:       value,
+		x:           x,
+		y:           y,
+		rect:        image.Rect(minX, minY, minX+squareDrawSize, minY+squareDrawSize),
+		textPosX:    minX + 14,
+		textPosY:    minY + squareDrawSize - 12,
+		outerImage:  outer,
+		drawOpts:    drawOpts,
+		textColor:   textColor,
 	}, nil
 }
 
 // Update handles the square's state
 func (s *Square) Update() {
-	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
-		s.isSelected = false
-		x, y := ebiten.CursorPosition()
-		if s.rect.Min.X <= x && x < s.rect.Max.X && s.rect.Min.Y <= y && y < s.rect.Max.Y {
-			s.isSelected = true
+	if s.isEditable {
+		if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+			s.isSelected = false
+			x, y := ebiten.CursorPosition()
+			if s.rect.Min.X <= x && x < s.rect.Max.X && s.rect.Min.Y <= y && y < s.rect.Max.Y {
+				s.isSelected = true
+			}
 		}
-	}
-	if s.isSelected {
-		if ebiten.IsKeyPressed(ebiten.Key0) || ebiten.IsKeyPressed(ebiten.KeyBackspace) {
-			s.value = 0
-		} else if ebiten.IsKeyPressed(ebiten.Key1) {
-			s.value = 1
-		} else if ebiten.IsKeyPressed(ebiten.Key2) {
-			s.value = 2
-		} else if ebiten.IsKeyPressed(ebiten.Key3) {
-			s.value = 3
-		} else if ebiten.IsKeyPressed(ebiten.Key4) {
-			s.value = 4
-		} else if ebiten.IsKeyPressed(ebiten.Key5) {
-			s.value = 5
-		} else if ebiten.IsKeyPressed(ebiten.Key6) {
-			s.value = 6
-		} else if ebiten.IsKeyPressed(ebiten.Key7) {
-			s.value = 7
-		} else if ebiten.IsKeyPressed(ebiten.Key8) {
-			s.value = 8
-		} else if ebiten.IsKeyPressed(ebiten.Key9) {
-			s.value = 9
+		if s.isSelected {
+			if ebiten.IsKeyPressed(ebiten.Key0) || ebiten.IsKeyPressed(ebiten.KeyBackspace) {
+				s.value = 0
+			}
+
+			keys := []ebiten.Key{1, 2, 3, 4, 5, 6, 7, 8, 9}
+			for _, k := range keys {
+				if ebiten.IsKeyPressed(k) {
+					s.value = uint8(k)
+				}
+			}
 		}
 	}
 }
@@ -134,6 +127,12 @@ func (s Square) drawSquare(screen *ebiten.Image) {
 		outerColor = outerColorSelected
 	}
 	s.outerImage.Fill(outerColor)
+	if s.isEditable {
+		innerSquareImage.Fill(color.White)
+	} else {
+		innerSquareImage.Fill(color.RGBA{0xa0, 0xa0, 0xa0, 0xff})
+
+	}
 	s.outerImage.DrawImage(innerSquareImage, innerSquareDrawOptions)
 
 	screen.DrawImage(s.outerImage, s.drawOpts)
@@ -143,7 +142,11 @@ func (s Square) drawValueText(screen *ebiten.Image) {
 	if s.value == 0 {
 		return
 	}
-	text.Draw(screen, strconv.Itoa(int(s.value)), squareNumberFont, s.textPosX, s.textPosY, s.textColor)
+	textColor := s.textColor
+	if s.isDuplicate {
+		textColor = color.RGBA{255, 0, 0, 255}
+	}
+	text.Draw(screen, strconv.Itoa(int(s.value)), squareNumberFont, s.textPosX, s.textPosY, textColor)
 }
 
 // Draw draws the square
