@@ -20,7 +20,8 @@ type Game struct {
 
 // NewGame creates a new instance of Game
 func NewGame() (*Game, error) {
-	board, err := newEmptyBoard()
+	// board, err := newEmptyBoard()
+	board, err := newBoardFromString(`600008517012000000007601824500920603260003040003105200100480762906050300020010050`)
 	if err != nil {
 		return nil, err
 	}
@@ -48,6 +49,6 @@ func (g Game) Draw(screen *ebiten.Image) error {
 	screen.Fill(color.NRGBA{0, 0, 0, 0xff})
 
 	g.board.Draw(screen)
-
+	// ebitenutil.DebugPrint(screen, fmt.Sprintf("%f %f", ebiten.CurrentFPS(), ebiten.CurrentTPS()))
 	return nil
 }

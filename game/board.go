@@ -19,24 +19,20 @@ type board struct {
 }
 
 func newEmptyBoard() (*board, error) {
-	return newBoardFromString(`
-	000000000
-	000000000
-	000000000
-	000000000
-	000000000
-	000000000
-	000000000
-	000000000
-	000000000
-	`)
+	return newBoardFromString(strings.ReplaceAll(`
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+000000000
+`, "\n", ""))
 }
 
 func newBoardFromString(boardString string) (*board, error) {
-	boardString = strings.ReplaceAll(boardString, "\n", "")
-	boardString = strings.ReplaceAll(boardString, "\t", "")
-	boardString = strings.ReplaceAll(boardString, " ", "")
-
 	squares := make([]*Square, 0, 9*9)
 	for y := uint8(0); y < 9; y++ {
 		for x := uint8(0); x < 9; x++ {
