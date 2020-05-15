@@ -1,9 +1,10 @@
 package game
 
 import (
-	"image/color"
+	"fmt"
 
 	"github.com/hajimehoshi/ebiten"
+	"github.com/hajimehoshi/ebiten/ebitenutil"
 	"github.com/hajimehoshi/ebiten/inpututil"
 )
 
@@ -16,6 +17,7 @@ const (
 type Game struct {
 	toExit bool
 	board  *board
+	debug  bool
 }
 
 // NewGame creates a new instance of Game
@@ -37,6 +39,8 @@ func (g Game) ToExit() bool {
 func (g *Game) Update() error {
 	if inpututil.IsKeyJustPressed(ebiten.KeyQ) {
 		g.toExit = true
+	} else if inpututil.IsKeyJustPressed(ebiten.KeyD) {
+		g.debug = !g.debug
 	}
 
 	g.board.Update()
@@ -46,9 +50,9 @@ func (g *Game) Update() error {
 
 // Draw draws the current game state
 func (g Game) Draw(screen *ebiten.Image) error {
-	screen.Fill(color.NRGBA{0, 0, 0, 0xff})
-
 	g.board.Draw(screen)
-	// ebitenutil.DebugPrint(screen, fmt.Sprintf("%f %f", ebiten.CurrentFPS(), ebiten.CurrentTPS()))
+	if g.debug {
+		ebitenutil.DebugPrint(screen, fmt.Sprintf("%f %f", ebiten.CurrentFPS(), ebiten.CurrentTPS()))
+	}
 	return nil
 }

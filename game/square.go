@@ -4,11 +4,8 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	"log"
-	"strconv"
 
 	"github.com/hajimehoshi/ebiten"
-	"github.com/hajimehoshi/ebiten/text"
 )
 
 // InvalidValueErr describes an invalid value being set to a square
@@ -23,25 +20,6 @@ const (
 	groupPadSize   = 12
 )
 
-var (
-	innerSquareImage       *ebiten.Image
-	innerSquareDrawOptions = &ebiten.DrawImageOptions{}
-	outerColorUnselected   = color.NRGBA{0, 0, 0, 0xFF}
-	outerColorSelected     = color.NRGBA{0xCC, 0x22, 0x22, 0xFF}
-	textColorUneditable    = color.NRGBA{0, 0, 0, 0xFF}
-	textColorEditable      = color.NRGBA{0x33, 0x33, 0xBB, 0xFF}
-)
-
-func init() {
-	var err error
-	innerSquareImage, err = ebiten.NewImage(squareDrawSize-8, squareDrawSize-8, ebiten.FilterNearest)
-	if err != nil {
-		log.Fatal(err)
-	}
-	innerSquareImage.Fill(color.White)
-	innerSquareDrawOptions.GeoM.Translate(4, 4)
-}
-
 // Square handles a single value of a sudoku square
 type Square struct {
 	// mutable state
@@ -54,30 +32,29 @@ type Square struct {
 	x, y               uint8
 	rect               image.Rectangle
 	textPosX, textPosY int
-	outerImage         *ebiten.Image
+	image              *ebiten.Image
 	drawOpts           *ebiten.DrawImageOptions
-	textColor          color.Color
 }
 
-func minPos(v int) int {
-	return v*squareDrawSize + v/3*groupPadSize
+func squarePos(v uint8) int {
+	return int(v)*squareDrawSize + int(v)/3*groupPadSize
 }
 
 // NewSquare creates a new square with the given params
-func NewSquare(isEditable bool, value, x, y uint8) (*Square, error) {
-	minX := minPos(int(x))
-	minY := minPos(int(y))
+func NewSquare(isEditable bool, value, x, y uint8) *Square {
+	posX := squarePos(x)
+	posY := squarePos(y)
 
-	outer, err := ebiten.NewImage(squareDrawSize, squareDrawSize, ebiten.FilterNearest)
-	if err != nil {
-		return nil, err
-	}
-	drawOpts := &ebiten.DrawImageOptions{}
-	drawOpts.GeoM.Translate(float64(minX), float64(minY))
+	const innerOffset = 4
+	const innerSize = squareDrawSize - innerOffset*2
+	img, _ := ebiten.NewImage(innerSize, innerSize, ebiten.FilterDefault)
+	opts := &ebiten.DrawImageOptions{}
+	opts.GeoM.Translate(float64(posX)+innerOffset, float64(posY)+innerOffset)
 
-	textColor := textColorUneditable
 	if isEditable {
-		textColor = textColorEditable
+		img.Fill(color.White)
+	} else {
+		img.Fill(color.Gray{0xa0})
 	}
 
 	return &Square{
@@ -87,13 +64,12 @@ func NewSquare(isEditable bool, value, x, y uint8) (*Square, error) {
 		value:       value,
 		x:           x,
 		y:           y,
-		rect:        image.Rect(minX, minY, minX+squareDrawSize, minY+squareDrawSize),
-		textPosX:    minX + 14,
-		textPosY:    minY + squareDrawSize - 12,
-		outerImage:  outer,
-		drawOpts:    drawOpts,
-		textColor:   textColor,
-	}, nil
+		rect:        image.Rect(posX, posY, posX+squareDrawSize, posY+squareDrawSize),
+		textPosX:    posX + 14,
+		textPosY:    posY + squareDrawSize - 12,
+		image:       img,
+		drawOpts:    opts,
+	}
 }
 
 // Update handles the square's state
@@ -121,37 +97,25 @@ func (s *Square) Update() {
 	}
 }
 
-func (s Square) drawSquare(screen *ebiten.Image) {
-	outerColor := outerColorUnselected
+func (s Square) outerColor() color.Color {
 	if s.isSelected {
-		outerColor = outerColorSelected
+		return color.NRGBA{0xCC, 0x22, 0x22, 0xFF}
 	}
-	s.outerImage.Fill(outerColor)
+	return color.NRGBA{0, 0, 0, 0xFF}
+}
+
+func (s Square) innerColor() color.Color {
 	if s.isEditable {
-		innerSquareImage.Fill(color.White)
-	} else {
-		innerSquareImage.Fill(color.RGBA{0xa0, 0xa0, 0xa0, 0xff})
-
+		return color.White
 	}
-	s.outerImage.DrawImage(innerSquareImage, innerSquareDrawOptions)
-
-	screen.DrawImage(s.outerImage, s.drawOpts)
+	return color.RGBA{0xa0, 0xa0, 0xa0, 0xff}
 }
 
-func (s Square) drawValueText(screen *ebiten.Image) {
-	if s.value == 0 {
-		return
+func (s Square) textColor() color.Color {
+	if s.isEditable {
+		return color.NRGBA{0x33, 0x33, 0xBB, 0xFF}
+	} else if s.isDuplicate {
+		return color.RGBA{255, 0, 0, 255}
 	}
-	textColor := s.textColor
-	if s.isDuplicate {
-		textColor = color.RGBA{255, 0, 0, 255}
-	}
-	text.Draw(screen, strconv.Itoa(int(s.value)), squareNumberFont, s.textPosX, s.textPosY, textColor)
-}
-
-// Draw draws the square
-func (s Square) Draw(screen *ebiten.Image) error {
-	s.drawSquare(screen)
-	s.drawValueText(screen)
-	return nil
+	return color.NRGBA{0, 0, 0, 0xFF}
 }

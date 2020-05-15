@@ -2,15 +2,32 @@ package game
 
 import (
 	"image/color"
-	"strings"
+	"strconv"
 
 	"github.com/hajimehoshi/ebiten"
+	"github.com/hajimehoshi/ebiten/text"
 )
 
 const (
 	boardSize = 9*squareDrawSize + 2*groupPadSize
 	boardPad  = 8
 )
+
+var selImg *ebiten.Image
+
+func init() {
+	const innerPad = 4
+	const innerSize = squareDrawSize - innerPad*2
+	inner, _ := ebiten.NewImage(innerSize, innerSize, ebiten.FilterDefault)
+	selImg, _ = ebiten.NewImage(squareDrawSize, squareDrawSize, ebiten.FilterDefault)
+
+	inner.Fill(color.White)
+	selImg.Fill(color.RGBA{0xff, 0, 0, 0xff})
+
+	opts := &ebiten.DrawImageOptions{}
+	opts.GeoM.Translate(innerPad, innerPad)
+	selImg.DrawImage(inner, opts)
+}
 
 type board struct {
 	squares []*Square
@@ -19,39 +36,24 @@ type board struct {
 	drawOpts   *ebiten.DrawImageOptions
 }
 
-func newEmptyBoard() (*board, error) {
-	return newBoardFromString(strings.ReplaceAll(`
-000000000
-000000000
-000000000
-000000000
-000000000
-000000000
-000000000
-000000000
-000000000
-`, "\n", ""))
-}
-
 func newBoardFromString(boardString string) (*board, error) {
+	boardImage, _ := ebiten.NewImage(boardSize, boardSize, ebiten.FilterNearest)
+	boardImage.Fill(color.Black)
+	opts := &ebiten.DrawImageOptions{}
+	opts.GeoM.Translate(boardPad, boardPad)
+
 	squares := make([]*Square, 0, 9*9)
 	for y := uint8(0); y < 9; y++ {
 		for x := uint8(0); x < 9; x++ {
 			value := boardString[y*9+x] - '0'
-			square, err := NewSquare(value == 0, value, x, y)
-			if err != nil {
-				return nil, err
+			square := NewSquare(value == 0, value, x, y)
+			boardImage.DrawImage(square.image, square.drawOpts)
+			if !square.isEditable {
+				text.Draw(boardImage, strconv.Itoa(int(value)), squareNumberFont, square.textPosX, square.textPosY, square.textColor())
 			}
 			squares = append(squares, square)
 		}
 	}
-
-	boardImage, err := ebiten.NewImage(boardSize, boardSize, ebiten.FilterNearest)
-	if err != nil {
-		return nil, err
-	}
-	opts := &ebiten.DrawImageOptions{}
-	opts.GeoM.Translate(boardPad, boardPad)
 
 	return &board{
 		squares:    squares,
@@ -71,12 +73,17 @@ func (b board) Draw(screen *ebiten.Image) error {
 	if b.isComplete() {
 		screen.Fill(color.RGBA{0, 255, 0, 255})
 	} else {
+		screen.DrawImage(b.boardImage, b.drawOpts)
 		for _, s := range b.squares {
-			if err := s.Draw(b.boardImage); err != nil {
-				return err
+			if s.isSelected {
+				opts := &ebiten.DrawImageOptions{}
+				opts.GeoM.Translate(float64(s.rect.Min.X)+boardPad, float64(s.rect.Min.Y)+boardPad)
+				screen.DrawImage(selImg, opts)
+			}
+			if s.isEditable && s.value != 0 || !s.isEditable && s.isDuplicate {
+				text.Draw(screen, strconv.Itoa(int(s.value)), squareNumberFont, s.textPosX+boardPad, s.textPosY+boardPad, s.textColor())
 			}
 		}
-		screen.DrawImage(b.boardImage, b.drawOpts)
 	}
 	return nil
 }
